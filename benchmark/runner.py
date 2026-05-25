@@ -210,10 +210,13 @@ def _run_single(
                             tool_name = call["name"]
                             args = call["arguments"]
                             arg_str = ", ".join(f'{k}="{v}"' for k, v in args.items())
-                            print(f"  │   调用: {tool_name}({arg_str})")
-                            uri = call.get("uri", "")
+                            if tool_name == "search_memory":
+                                print(f"  │   搜索: {tool_name}({arg_str})")
+                            else:
+                                print(f"  │   调用: {tool_name}({arg_str})")
+                            uri = call.get("uri")
                             if uri:
-                                print(f"  │   召回 URI: {uri}")
+                                print(f"  │   URI: {uri}")
                             result_text = call.get("result", "")
                             if result_text:
                                 result_short = _sanitize(result_text)[:150]

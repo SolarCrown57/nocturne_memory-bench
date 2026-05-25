@@ -160,15 +160,17 @@ class MemoryAgent:
                     except Exception as e:
                         tool_result = f"[工具错误] {e}"
 
-                    # 提取涉及的 URI
-                    uri = tool_args.get("uri", tool_args.get("target_uri", tool_args.get("parent_uri")))
-                    if not uri and tool_name == "search_memory":
-                        uri = tool_args.get("query", "")
+                    # 提取真正的 URI（仅 read_memory 等有明确 uri 参数的工具）
+                    uri = tool_args.get("uri") or tool_args.get("target_uri") or tool_args.get("parent_uri") or ""
+                    # search_memory 的 query 不是 URI，不对它做记录
+                    # 如果 uri 看起来不像真实 URI（没有 ://），也跳过
+                    if uri and "://" not in uri:
+                        uri = ""
 
                     call_record = {
                         "call_index": len(all_tool_calls) + 1,
                         "name": tool_name, "arguments": tool_args,
-                        "uri": uri, "result": tool_result[:500],
+                        "uri": uri if uri else None, "result": tool_result[:500],
                     }
                     all_tool_calls.append(call_record)
                     tool_call_records.append(call_record)
