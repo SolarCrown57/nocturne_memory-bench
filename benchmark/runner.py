@@ -153,6 +153,12 @@ def _run_single(
 
     for tc in scenario.test_cases:
         if verbose:
+            # 第一个测试用例时打印系统提示词
+            if tc == scenario.test_cases[0]:
+                prompt_preview = agent.context[:300].replace('\n', '\\n')
+                print(f"\n  [系统提示] {prompt_preview}...")
+                print(f"{'─'*60}")
+
             print(f"\n{'─'*60}")
             print(f"  用户查询: {tc.query}")
             print(f"  期望召回: {', '.join(tc.expected_recalls)}")
@@ -168,16 +174,21 @@ def _run_single(
             )
             total_tokens += agent_result.tokens_used
 
-            # verbose: 打印每次工具调用
+            # verbose: 打印每次工具调用和 LLM 响应
             if verbose and agent_result.tool_calls:
                 for call in agent_result.tool_calls:
                     tool_name = call.get("name", "unknown")
                     args = call.get("arguments", {})
                     uri = args.get("uri") or args.get("query") or ""
-                    short_result = call.get("result", "")[:120].replace("\n", " ")
+                    short_result = call.get("result", "")[:200].replace("\n", " ")
                     print(f"    调用: {tool_name}(\"{uri}\")")
                     if short_result:
                         print(f"          -> {short_result}...")
+                # 打印 LLM 每轮的文字输出
+                if agent_result.llm_responses:
+                    for i, resp_text in enumerate(agent_result.llm_responses):
+                        clean = resp_text[:300].replace('\n', ' ')
+                        print(f"    LLM[{i+1}]: {clean}...")
                 print()
 
             test_results.append(TestCaseResult(

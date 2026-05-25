@@ -64,10 +64,16 @@ Best practices:
 class AgentRunResult:
     """Agent 单次查询的运行结果"""
     query: str
-    tool_calls: List[Dict[str, Any]]    # [{call_index, name, arguments, uri}]
+    tool_calls: List[Dict[str, Any]]    # [{call_index, name, arguments, uri, result}]
     turns: int
     tokens_used: int
     final_response: str
+    system_prompt: str = ""             # 系统提示词
+    llm_responses: List[str] = None     # LLM 每轮返回的文本内容
+
+    def __post_init__(self):
+        if self.llm_responses is None:
+            self.llm_responses = []
 
 
 class MemoryAgent:
@@ -117,6 +123,7 @@ class MemoryAgent:
         tools = self._format_tools_for_llm()
         all_tool_calls = []
         total_tokens = 0
+        llm_responses = []
 
         messages = [
             Message(role="system", content=self.context),
@@ -128,6 +135,10 @@ class MemoryAgent:
             response = self.llm.chat(messages=messages, tools=tools)
             total_tokens += sum(response.usage.values())
 
+            # 记录 LLM 文本输出
+            if response.text:
+                llm_responses.append(response.text)
+
             if not response.tool_calls:
                 # LLM 没有调用工具，结束
                 return AgentRunResult(
@@ -136,6 +147,8 @@ class MemoryAgent:
                     turns=turn + 1,
                     tokens_used=total_tokens,
                     final_response=response.text,
+                    system_prompt=self.context,
+                    llm_responses=llm_responses,
                 )
 
             # 执行工具调用
@@ -186,5 +199,7 @@ class MemoryAgent:
             tool_calls=all_tool_calls,
             turns=max_tool_calls,
             tokens_used=total_tokens,
-            final_response="[MAX TOOL CALLS REACHED]",
+            final_response="[达到最大工具调用次数]",
+            system_prompt=self.context,
+            llm_responses=llm_responses,
         )
