@@ -107,12 +107,12 @@ def run_benchmark(
             continue
 
         print(f"\n{'='*60}")
-        print(f"Scenario: {scenario.name} | Test cases: {len(scenario.test_cases)}")
+        print(f"  场景: {scenario.name} | 测试用例: {len(scenario.test_cases)}")
         print(f"{'='*60}")
 
         for llm_cfg in config.llms:
             if not llm_cfg.api_key:
-                print(f"  [SKIP]️ Skipping {llm_cfg.provider}/{llm_cfg.model} (no API key)")
+                print(f"  [跳过] {llm_cfg.provider}/{llm_cfg.model} (无 API 密钥)")
                 continue
 
             for ctx_var in config.context_variations:
@@ -154,11 +154,11 @@ def _run_single(
     for tc in scenario.test_cases:
         if verbose:
             print(f"\n{'─'*60}")
-            print(f"  User Query: {tc.query}")
-            print(f"  Expected Recall: {', '.join(tc.expected_recalls)}")
+            print(f"  用户查询: {tc.query}")
+            print(f"  期望召回: {', '.join(tc.expected_recalls)}")
             print(f"{'─'*60}")
 
-        print(f"    Test: {tc.id}...", end=" ", flush=True)
+        print(f"    测试: {tc.id}...", end=" ", flush=True)
 
         try:
             agent_result = agent.run_query(
@@ -175,7 +175,7 @@ def _run_single(
                     args = call.get("arguments", {})
                     uri = args.get("uri") or args.get("query") or ""
                     short_result = call.get("result", "")[:120].replace("\n", " ")
-                    print(f"    call: {tool_name}(\"{uri}\")")
+                    print(f"    调用: {tool_name}(\"{uri}\")")
                     if short_result:
                         print(f"          -> {short_result}...")
                 print()
@@ -189,12 +189,12 @@ def _run_single(
                 tokens_used=agent_result.tokens_used,
             ))
             recalled = [tc.get("uri") for tc in agent_result.tool_calls if tc.get("uri")]
-            print(f"[OK] ({agent_result.turns} turns, {len(recalled)} URIs recalled)")
+            print(f"[通过] ({agent_result.turns} 轮, {len(recalled)} 条 URI 召回)")
 
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"[FAIL] {e}")
+            print(f"[失败] {e}")
             test_results.append(TestCaseResult(
                 test_case_id=tc.id,
                 query=tc.query,

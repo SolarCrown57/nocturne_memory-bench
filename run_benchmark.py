@@ -57,15 +57,15 @@ def main():
     # --init: 仅创建 config.json
     if args.init:
         ensure_config_exists()
-        print("[OK] config.json is ready. Edit it to configure LLMs and API keys.")
+        print("[完成] config.json 已生成。编辑它来配置 LLM 和 API 密钥。")
         return
 
     # 加载配置
-    print("[INIT] Loading config.json...")
+    print("[加载] 读取 config.json...")
     config = BenchmarkConfig.from_config_json()
 
     if not config.llms:
-        print("[FAIL] No enabled LLMs in config.json. Add LLMs or set 'enabled: true'.")
+        print("[错误] config.json 中没有启用的 LLM。请添加 LLM 或将 'enabled' 设为 true。")
         return
 
     # 过滤 LLM（命令行覆盖）
@@ -73,13 +73,13 @@ def main():
         provider, model = args.llm.split(",", 1)
         config.llms = [l for l in config.llms if l.provider == provider and l.model == model]
         if not config.llms:
-            print(f"[FAIL] LLM not found: {args.llm}")
+            print(f"[错误] LLM 未找到: {args.llm}")
             return
 
     # 过滤上下文（命令行覆盖）
     if args.context:
         if args.context not in config.context_variations:
-            print(f"[FAIL] Unknown context: {args.context}")
+            print(f"[错误] 未知的上下文变体: {args.context}")
             return
         config.context_variations = [args.context]
 
@@ -87,23 +87,23 @@ def main():
     active_llms = [l for l in config.llms if l.api_key]
     skipped = len(config.llms) - len(active_llms)
     if skipped:
-        print(f"[SKIP]️  Skipping {skipped} LLM(s) with no API key")
+        print(f"[跳过] 忽略 {skipped} 个无 API 密钥的 LLM")
         config.llms = active_llms
     if not config.llms:
-        print("[FAIL] No LLMs with valid API keys. Check config.json or environment variables.")
+        print("[错误] 没有可用的 LLM（缺少 API 密钥）。检查 config.json 或环境变量。")
         return
 
     # 显示配置
     print("=" * 60)
-    print("[*] LLM Memory Recall Benchmark")
+    print("LLM 记忆召回基准测试")
     print("=" * 60)
-    print(f"LLMs: {', '.join(f'{l.provider}/{l.model}' for l in config.llms)}")
-    print(f"Contexts: {', '.join(config.context_variations)}")
-    print(f"Scenarios dir: data/scenarios/")
-    print(f"Results dir: {config.results_dir}")
+    print(f"LLM: {', '.join(f'{l.provider}/{l.model}' for l in config.llms)}")
+    print(f"上下文变体: {', '.join(config.context_variations)}")
+    print(f"场景目录: data/scenarios/")
+    print(f"结果目录: {config.results_dir}")
 
     if args.dry_run:
-        print("\n[DRY RUN] DRY RUN - verifying framework...")
+        print("\n[干跑] 验证框架...")
         _dry_run()
         return
 
@@ -138,7 +138,7 @@ def main():
     generate_markdown_report(aggregates, out_dir)
     export_json(aggregates, out_dir)
 
-    print(f"\n[OK] Done! Reports saved to {out_dir}/")
+    print(f"\n[通过] 完成！报告已保存到 {out_dir}/")
 
 
 def _dry_run():
@@ -147,25 +147,25 @@ def _dry_run():
     from memory import reset_memory, get_graph_service
 
     scenario = load_scenario("data/scenarios/roleplay_identity.json")
-    print(f"  [OK] Scenario loaded: {scenario.name}")
-    print(f"    Memories: {len(scenario.memories)}")
-    print(f"    Test cases: {len(scenario.test_cases)}")
+    print(f"  [通过] 场景已加载: {scenario.name}")
+    print(f"    记忆数: {len(scenario.memories)}")
+    print(f"    测试用例: {len(scenario.test_cases)}")
 
     # 测试记忆系统基础操作
     reset_memory()
     from memory import get_search_indexer
     try:
         results = get_search_indexer().search("test", limit=1)
-        print(f"    Search test OK ({len(results)} results)")
+        print(f"    搜索测试: {len(results)} 条结果")
     except Exception as e:
-        print(f"    [WARN] Search test error: {e}")
+        print(f"    [警告] 搜索测试失败: {e}")
 
-    print(f"  [OK] Memory system operational")
+    print(f"  [通过] 记忆系统就绪")
 
     from memory.tools import TOOLS
-    print(f"  [OK] Tools registered: {len(TOOLS)} ({', '.join(TOOLS.keys())})")
+    print(f"  [通过] 工具已注册: {len(TOOLS)} ({', '.join(TOOLS.keys())})")
 
-    print(f"\n[OK] Framework verification passed!")
+    print(f"\n[通过] 框架验证通过！")
 
 
 if __name__ == "__main__":
