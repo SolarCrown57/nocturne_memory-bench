@@ -1,0 +1,18 @@
+# 配置文件（可能含 API key）
+config.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# 数据库
+*.db
+*.bak
+
+# 测试结果
+results/
+
+# IDE
+.vscode/
+.idea/

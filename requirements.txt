@@ -1,0 +1,25 @@
+# LLM 记忆召回率基准测试
+#
+# 测试不同 LLM 使用 Nocturne Memory 架构时，
+# 在不同上下文条件下召回记忆的能力。
+#
+# 核心指标：Recall@k, MRR
+
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+# LLM API 客户端
+openai>=1.0.0           # OpenAI / DeepSeek（兼容 API）
+anthropic>=0.30.0       # Claude
+google-generativeai     # Gemini
+
+# 数据处理
+pyahocorasick>=2.0.0    # Aho-Corasick 多模式匹配（豆辞典）
+
+# 结果可视化
+jinja2>=3.0.0           # HTML 报告模板
+matplotlib>=3.7.0       # 图表生成
+
+# 开发
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
