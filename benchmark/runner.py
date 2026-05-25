@@ -9,6 +9,7 @@
 5. 汇总
 """
 
+import re
 import time
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
@@ -21,6 +22,29 @@ from .agent import MemoryAgent, AgentRunResult
 from .evaluator import evaluate_run_result, RecallMetrics, aggregate_metrics, AggregatedMetrics
 
 import config as cfg
+
+
+# ── 输出清洗 ──
+
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # 表情符号
+    "\U0001F300-\U0001F5FF"  # 符号和象形文字
+    "\U0001F680-\U0001F6FF"  # 交通和地图
+    "\U0001F1E0-\U0001F1FF"  # 旗帜
+    "\U00002600-\U000027BF"  # 杂项符号
+    "\U0000FE00-\U0000FE0F"  # 变体选择器
+    "\U0001F900-\U0001F9FF"  # 补充符号和象形文字
+    "\U0001FA00-\U0001FA6F"  # 国际象棋符号
+    "\U0001FA70-\U0001FAFF"  # 扩展-A 符号
+    "]+", flags=re.UNICODE
+)
+
+
+def _sanitize(text: str) -> str:
+    """移除 emoji 和非打印字符，清理换行。"""
+    text = _EMOJI_RE.sub("", text)
+    return " ".join(text.split())
 
 
 @dataclass
@@ -152,19 +176,20 @@ def _run_single(
     test_results: List[TestCaseResult] = []
 
     for tc in scenario.test_cases:
-        if verbose:
+        if verbose and tc == scenario.test_cases[0]:
             # 第一个测试用例时打印系统提示词
-            if tc == scenario.test_cases[0]:
-                prompt_preview = agent.context[:300].replace('\n', '\\n')
-                print(f"\n  [系统提示] {prompt_preview}...")
-                print(f"{'─'*60}")
-
-            print(f"\n{'─'*60}")
-            print(f"  用户查询: {tc.query}")
-            print(f"  期望召回: {', '.join(tc.expected_recalls)}")
+            print(f"\n{'═'*60}")
+            print(f"  系统提示词（{context_variation}）:")
             print(f"{'─'*60}")
+            for line in agent.context.split('\n')[:15]:
+                print(f"  {line}")
+            print(f"{'═'*60}")
 
-        print(f"    测试: {tc.id}...", end=" ", flush=True)
+        print(f"\n{'─'*60}")
+        print(f"  测试: {tc.id}")
+        print(f"  用户查询: {tc.query}")
+        print(f"  期望召回: {', '.join(tc.expected_recalls)}")
+        print(f"{'─'*60}")
 
         try:
             agent_result = agent.run_query(
@@ -174,21 +199,29 @@ def _run_single(
             )
             total_tokens += agent_result.tokens_used
 
-            # verbose: 打印每次工具调用和 LLM 响应
-            if verbose and agent_result.tool_calls:
-                for call in agent_result.tool_calls:
-                    tool_name = call.get("name", "unknown")
-                    args = call.get("arguments", {})
-                    uri = args.get("uri") or args.get("query") or ""
-                    short_result = call.get("result", "")[:200].replace("\n", " ")
-                    print(f"    调用: {tool_name}(\"{uri}\")")
-                    if short_result:
-                        print(f"          -> {short_result}...")
-                # 打印 LLM 每轮的文字输出
-                if agent_result.llm_responses:
-                    for i, resp_text in enumerate(agent_result.llm_responses):
-                        clean = resp_text[:300].replace('\n', ' ')
-                        print(f"    LLM[{i+1}]: {clean}...")
+            # verbose: 逐轮展示完整交互
+            if verbose:
+                for turn_rec in agent_result.turn_records:
+                    turn_num = turn_rec.turn_index
+                    print(f"\n  ┌─ 第 {turn_num} 轮 ─────────────────────────────")
+                    print(f"  │ 输入: {turn_rec.messages_summary}")
+                    if turn_rec.tool_calls:
+                        for call in turn_rec.tool_calls:
+                            tool_name = call["name"]
+                            args = call["arguments"]
+                            arg_str = ", ".join(f'{k}="{v}"' for k, v in args.items())
+                            print(f"  │   调用: {tool_name}({arg_str})")
+                            uri = call.get("uri", "")
+                            if uri:
+                                print(f"  │   召回 URI: {uri}")
+                            result_text = call.get("result", "")
+                            if result_text:
+                                result_short = _sanitize(result_text)[:150]
+                                print(f"  │   结果: {result_short}...")
+                    if turn_rec.llm_text:
+                        llm_text_short = _sanitize(turn_rec.llm_text)[:250]
+                        print(f"  │ LLM回复: {llm_text_short}...")
+                    print(f"  └{'─'*50}")
                 print()
 
             test_results.append(TestCaseResult(
@@ -200,7 +233,9 @@ def _run_single(
                 tokens_used=agent_result.tokens_used,
             ))
             recalled = [tc.get("uri") for tc in agent_result.tool_calls if tc.get("uri")]
-            print(f"[通过] ({agent_result.turns} 轮, {len(recalled)} 条 URI 召回)")
+            recalled_clean = [u for u in recalled if u and not u.startswith("system://")]
+            recall_str = ", ".join(recalled_clean[:3]) if recalled_clean else "无"
+            print(f"    [通过] {agent_result.turns}轮 | 召回: {recall_str}")
 
         except Exception as e:
             import traceback
