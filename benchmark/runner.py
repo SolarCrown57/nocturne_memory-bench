@@ -232,10 +232,25 @@ def _run_single(
                 success=True,
                 tokens_used=agent_result.tokens_used,
             ))
-            recalled = [tc.get("uri") for tc in agent_result.tool_calls if tc.get("uri")]
-            recalled_clean = [u for u in recalled if u and not u.startswith("system://")]
-            recall_str = ", ".join(recalled_clean[:3]) if recalled_clean else "无"
-            print(f"    [通过] {agent_result.turns}轮 | 召回: {recall_str}")
+            # 计算实际召回：只看包含 :// 的真实 URI
+            recalled_uris = []
+            for call in agent_result.tool_calls:
+                uri = call.get("uri", "")
+                if uri and "://" in uri and not uri.startswith("system://"):
+                    if uri not in recalled_uris:
+                        recalled_uris.append(uri)
+
+            # 对比期望召回
+            expected = set(tc.expected_recalls)
+            hits = [u for u in recalled_uris if u in expected]
+            misses = [u for u in expected if u not in recalled_uris]
+
+            if hits:
+                status = f"[命中 {len(hits)}/{len(expected)}]"
+            else:
+                status = f"[未命中 0/{len(expected)}]"
+
+            print(f"    {status} {agent_result.turns}轮 | 实际召回: {', '.join(recalled_uris[:3]) or '无'}")
 
         except Exception as e:
             import traceback
