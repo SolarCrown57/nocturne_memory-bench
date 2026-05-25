@@ -1,0 +1,77 @@
+{
+  "name": "project_knowledge",
+  "description": "项目管理场景 - 测试 LLM 在工作上下文中召回项目知识的能力",
+  "domain": "project",
+  "memories": [
+    {
+      "uri": "jobstation/overview",
+      "content": "Jobstation：一个招聘匹配平台，当前处于商业化验证阶段。核心价值是通过结构化匹配逻辑替代传统猎头的主观判断。目标客群是技术型公司 CTO。",
+      "priority": 10.0,
+      "disclosure": "讨论 Jobstation 项目时加载",
+      "children": [
+        {
+          "uri": "gtm_strategy",
+          "content": "GTM 策略：不走传统销售，必须做到 Self-Service 全自动化。要做数据闭环——不只是匹配工具，更是行业定价情报站。关键是要把用户的逻辑洁癖代码化。",
+          "priority": 9.0,
+          "disclosure": "讨论商业策略时"
+        },
+        {
+          "uri": "sales_bottleneck",
+          "content": "销售瓶颈：传统销售团队不理解结构化匹配逻辑，产生主观抗拒。解决方案是用标杆客户做成全流程自动化样板，让终端直接体验。",
+          "priority": 8.0,
+          "disclosure": "讨论销售问题时"
+        }
+      ]
+    },
+    {
+      "uri": "tech_stack",
+      "content": "后端 Python + PostgreSQL，前端 React + TypeScript。微服务架构 8 个核心服务。匹配引擎用自定义评分算法而非 ML，注重可解释性。",
+      "priority": 7.0,
+      "disclosure": "讨论技术架构时"
+    },
+    {
+      "uri": "team",
+      "content": "团队：创始人兼产品经理，2 个全职后端，1 个前端外包。缺 DevOps 和市场运营。最大风险是创始人单点故障。",
+      "priority": 6.0,
+      "disclosure": "讨论团队或组织时"
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "overview_recall",
+      "query": "Jobstation 是做什么的？",
+      "expected_recalls": ["project://jobstation/overview"],
+      "context": "standard"
+    },
+    {
+      "id": "strategy_recall",
+      "query": "怎么把 Jobstation 推向市场？",
+      "expected_recalls": ["project://jobstation/overview/gtm_strategy"],
+      "context": "standard"
+    },
+    {
+      "id": "sales_issue",
+      "query": "现在销售端有什么问题？",
+      "expected_recalls": ["project://jobstation/overview/sales_bottleneck"],
+      "context": "standard"
+    },
+    {
+      "id": "tech_query",
+      "query": "我们用的什么技术栈？",
+      "expected_recalls": ["project://tech_stack"],
+      "context": "standard"
+    },
+    {
+      "id": "team_risk",
+      "query": "团队现在有什么风险？",
+      "expected_recalls": ["project://team"],
+      "context": "standard"
+    },
+    {
+      "id": "multi_recall",
+      "query": "总结一下 Jobstation 的现状，包括技术、团队和市场策略",
+      "expected_recalls": ["project://jobstation/overview", "project://tech_stack", "project://team"],
+      "context": "standard"
+    }
+  ]
+}
