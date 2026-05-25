@@ -86,6 +86,7 @@ SYSTEM_PROMPTS = {
 def run_benchmark(
     config: Optional[cfg.BenchmarkConfig] = None,
     scenario_names: Optional[List[str]] = None,
+    verbose: bool = False,
 ) -> List[RunResult]:
     """
     运行完整的 benchmark。
@@ -93,6 +94,7 @@ def run_benchmark(
     Args:
         config: Benchmark 配置
         scenario_names: 要测试的场景名称列表（None = 全部）
+        verbose: 打印详细的工具调用追踪
     """
     if config is None:
         config = cfg.BenchmarkConfig.from_config_json()
@@ -117,7 +119,7 @@ def run_benchmark(
                 print(f"\n  >  {llm_cfg.provider}/{llm_cfg.model} [{ctx_var}]")
 
                 run_result = _run_single(
-                    config, scenario, llm_cfg, ctx_var,
+                    config, scenario, llm_cfg, ctx_var, verbose=verbose,
                 )
                 all_results.append(run_result)
 
@@ -129,6 +131,7 @@ def _run_single(
     scenario: Scenario,
     llm_config: cfg.LLMConfig,
     context_variation: str,
+    verbose: bool = False,
 ) -> RunResult:
     """运行单个 (场景 × LLM × 上下文) 组合。"""
     start_time = time.time()
@@ -149,6 +152,12 @@ def _run_single(
     test_results: List[TestCaseResult] = []
 
     for tc in scenario.test_cases:
+        if verbose:
+            print(f"\n{'─'*60}")
+            print(f"  User Query: {tc.query}")
+            print(f"  Expected Recall: {', '.join(tc.expected_recalls)}")
+            print(f"{'─'*60}")
+
         print(f"    Test: {tc.id}...", end=" ", flush=True)
 
         try:
@@ -158,6 +167,18 @@ def _run_single(
                 max_tool_calls=config.max_tool_calls_per_case,
             )
             total_tokens += agent_result.tokens_used
+
+            # verbose: 打印每次工具调用
+            if verbose and agent_result.tool_calls:
+                for call in agent_result.tool_calls:
+                    tool_name = call.get("name", "unknown")
+                    args = call.get("arguments", {})
+                    uri = args.get("uri") or args.get("query") or ""
+                    short_result = call.get("result", "")[:120].replace("\n", " ")
+                    print(f"    call: {tool_name}(\"{uri}\")")
+                    if short_result:
+                        print(f"          -> {short_result}...")
+                print()
 
             test_results.append(TestCaseResult(
                 test_case_id=tc.id,

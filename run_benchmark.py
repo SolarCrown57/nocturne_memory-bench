@@ -49,6 +49,8 @@ def main():
                         help="仅生成 config.json 并退出")
     parser.add_argument("--output", type=str, default="results",
                         help="结果输出目录（默认: results）")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="打印详细的工具调用追踪")
 
     args = parser.parse_args()
 
@@ -107,7 +109,7 @@ def main():
 
     # 运行测试
     scenario_names = args.scenario.split(",") if args.scenario else None
-    results = run_benchmark(config, scenario_names=scenario_names)
+    results = run_benchmark(config, scenario_names=scenario_names, verbose=args.verbose)
 
     if not results:
         print("\n[FAIL] No results. Check API keys and scenario files.")
